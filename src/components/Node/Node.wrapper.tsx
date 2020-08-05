@@ -129,6 +129,15 @@ export const NodeWrapper = ({
     }
   }, [node, compRef.current, size.width, size.height])
 
+  // Ports can sort by look at port.properties.order
+  const portsOrder = Object.keys(node.ports).map((portId) => {
+    return {
+      ...node.ports[portId],
+      order: node.ports[portId].properties && node.ports[portId].properties.order ? node.ports[portId].properties.order : 0,
+    }
+  })
+  portsOrder.sort((a, b) => a.order - b.order )
+
   const children = (
     <>
       <ResizeObserver
@@ -139,17 +148,17 @@ export const NodeWrapper = ({
       />
       <NodeInner node={node} config={config} />
       <Ports node={node} config={config}>
-        { Object.keys(node.ports).map((portId) => (
+        { portsOrder.map((port) => (
           <PortWrapper
             config={config}
-            key={portId}
+            key={port.id}
             offset={offset}
             selected={selected}
             selectedLink={selectedLink}
             hoveredLink={hoveredLink}
             hovered={hovered}
             node={node}
-            port={node.ports[portId]}
+            port={node.ports[port.id]}
             Component={Port}
             onPortPositionChange={onPortPositionChange}
             onLinkStart={config.readonly ? noop : onLinkStart}
