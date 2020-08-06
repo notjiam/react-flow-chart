@@ -1,6 +1,5 @@
 import { isEqual } from 'lodash'
 import * as React from 'react'
-import * as ReactDOM from 'react-dom'
 import { v4 } from 'uuid'
 import { IConfig, ILink, INode, IOnLinkCancel, IOnLinkComplete, IOnLinkMove, IOnLinkStart, IOnPortPositionChange, IPort, IPosition, ISelectedOrHovered } from '../../'
 import CanvasContext from '../Canvas/CanvasContext'
@@ -161,7 +160,7 @@ export class PortWrapper extends React.Component<IPortWrapperProps> {
   }
 
   private updatePortPosition () {
-    const el = ReactDOM.findDOMNode(this.nodeRef.current) as HTMLInputElement
+    const el = this.nodeRef.current as HTMLInputElement
     if (el) {
       // Ports component should be positions absolute
       // Factor this in so we get position relative to the node

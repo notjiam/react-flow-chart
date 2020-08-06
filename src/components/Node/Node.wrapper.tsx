@@ -1,17 +1,32 @@
 import * as React from 'react'
-import * as ReactDOM from 'react-dom'
 import Draggable, { DraggableData } from 'react-draggable'
 import ResizeObserver from 'react-resize-observer'
 import {
-  IConfig, ILink, INode, INodeInnerDefaultProps, IOnDragNode,
-  IOnDragNodeStop, IOnLinkCancel,
-  IOnLinkComplete, IOnLinkMove,
-  IOnLinkStart, IOnNodeClick, IOnNodeDoubleClick, IOnNodeMouseEnter,
-  IOnNodeMouseLeave, IOnNodeSizeChange, IOnPortPositionChange,
-  IPortDefaultProps, IPortsDefaultProps,
-  IPosition, ISelectedOrHovered, ISize, PortWrapper,
+  IConfig,
+  ILink,
+  INode,
+  INodeInnerDefaultProps,
+  IOnDragNode,
+  IOnDragNodeStop,
+  IOnLinkCancel,
+  IOnLinkComplete,
+  IOnLinkMove,
+  IOnLinkStart,
+  IOnNodeClick,
+  IOnNodeDoubleClick,
+  IOnNodeMouseEnter,
+  IOnNodeMouseLeave,
+  IOnNodeSizeChange,
+  IOnPortPositionChange,
+  IPortDefaultProps,
+  IPortsDefaultProps,
+  IPosition,
+  ISelectedOrHovered,
+  ISize,
+  PortWrapper,
 } from '../../'
 import { noop } from '../../utils'
+import CanvasContext from '../Canvas/CanvasContext'
 import { INodeDefaultProps, NodeDefault } from './Node.default'
 
 export interface INodeWrapperProps {
@@ -67,42 +82,57 @@ export const NodeWrapper = ({
   onLinkComplete,
   onLinkCancel,
 }: INodeWrapperProps) => {
+  const { zoomScale } = React.useContext(CanvasContext)
   const [size, setSize] = React.useState<ISize>({ width: 0, height: 0 })
 
   const isDragging = React.useRef(false)
+
+  const readonly = config.readonly || node.readonly || false
 
   const onStart = React.useCallback((e: MouseEvent) => {
     // Stop propagation so the canvas does not move
     e.stopPropagation()
     isDragging.current = false
-  },[])
+  }, [])
 
-  const onDrag = React.useCallback((event: MouseEvent, data: DraggableData) => {
-    isDragging.current = true
-    onDragNode({ config, event, data, id: node.id })
-  }, [onDragNode, config, node.id])
+  const onDrag = React.useCallback(
+    (event: MouseEvent, data: DraggableData) => {
+      isDragging.current = true
+      onDragNode({ config, event, data, id: node.id })
+    },
+    [onDragNode, config, node.id],
+  )
 
-  const onStop = React.useCallback((event: MouseEvent, data: DraggableData) => {
-    onDragNodeStop({ config, event, data, id: node.id })
-  }, [onDragNodeStop, config, node.id])
+  const onStop = React.useCallback(
+    (event: MouseEvent, data: DraggableData) => {
+      onDragNodeStop({ config, event, data, id: node.id })
+    },
+    [onDragNodeStop, config, node.id],
+  )
 
-  const onClick = React.useCallback((e: React.MouseEvent) => {
-    if (!config.readonly) {
-      e.stopPropagation()
-      if (!isDragging.current) {
-        onNodeClick({ config, nodeId: node.id })
+  const onClick = React.useCallback(
+    (e: React.MouseEvent) => {
+      if (!config.readonly || config.selectable) {
+        e.stopPropagation()
+        if (!isDragging.current) {
+          onNodeClick({ config, nodeId: node.id })
+        }
       }
-    }
-  }, [config, node.id])
+    },
+    [config, node.id],
+  )
 
-  const onDoubleClick = React.useCallback((e: React.MouseEvent) => {
-    if (!config.readonly) {
-      e.stopPropagation()
-      if (!isDragging.current) {
-        onNodeDoubleClick({ config, nodeId: node.id })
+  const onDoubleClick = React.useCallback(
+    (e: React.MouseEvent) => {
+      if (!config.readonly) {
+        e.stopPropagation()
+        if (!isDragging.current) {
+          onNodeDoubleClick({ config, nodeId: node.id })
+        }
       }
-    }
-  }, [config, node.id])
+    },
+    [config, node.id],
+  )
 
   const onMouseEnter = React.useCallback(() => {
     onNodeMouseEnter({ config, nodeId: node.id })
@@ -116,12 +146,9 @@ export const NodeWrapper = ({
 
   // TODO: probably should add an observer to track node component size changes
   React.useLayoutEffect(() => {
-    const el = ReactDOM.findDOMNode(compRef.current) as HTMLInputElement
+    const el = compRef.current as HTMLInputElement
     if (el) {
-      if (
-        (node.size && node.size.width) !== el.offsetWidth ||
-        (node.size && node.size.height) !== el.offsetHeight
-      ) {
+      if ((node.size && node.size.width) !== el.offsetWidth || (node.size && node.size.height) !== el.offsetHeight) {
         const newSize = { width: el.offsetWidth, height: el.offsetHeight }
         setSize(newSize)
         onNodeSizeChange({ config, nodeId: node.id, size: newSize })
@@ -147,18 +174,19 @@ export const NodeWrapper = ({
         }}
       />
       <NodeInner node={node} config={config} />
-      <Ports node={node} config={config}>
-        { portsOrder.map((port) => (
+
+      <Ports node={node} config={config} >
+        {portsOrder.map(({id: portId}) => (
           <PortWrapper
             config={config}
-            key={port.id}
+            key={portId}
             offset={offset}
             selected={selected}
             selectedLink={selectedLink}
             hoveredLink={hoveredLink}
             hovered={hovered}
             node={node}
-            port={node.ports[port.id]}
+            port={node.ports[portId]}
             Component={Port}
             onPortPositionChange={onPortPositionChange}
             onLinkStart={config.readonly ? noop : onLinkStart}
@@ -166,7 +194,7 @@ export const NodeWrapper = ({
             onLinkComplete={onLinkComplete}
             onLinkCancel={onLinkCancel}
           />
-        )) }
+        ))}
       </Ports>
     </>
   )
@@ -177,10 +205,12 @@ export const NodeWrapper = ({
       axis="both"
       position={node.position}
       grid={[1,1]}
+      scale={zoomScale}
       onStart={onStart}
       onDrag={onDrag}
       onStop={onStop}
-      disabled={config.readonly}
+      disabled={readonly}
+      nodeRef={compRef}
     >
       <Component
         config={config}
